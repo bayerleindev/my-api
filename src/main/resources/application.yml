@@ -13,12 +13,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
         enabled: true
       show-details: never
+  metrics:
+    tags:
+      application: ${spring.application.name}
+      version: ${APP_VERSION:unknown}
+      color: ${APP_COLOR:unknown}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
 
 logging:
   level:

@@ -66,7 +66,10 @@ Exemplo de resposta:
 curl http://localhost:8080/actuator/health
 curl http://localhost:8080/actuator/health/liveness
 curl http://localhost:8080/actuator/health/readiness
+curl http://localhost:8080/actuator/prometheus
 ```
+
+O endpoint Prometheus exporta métricas HTTP, JVM e de processo com as tags `application`, `version` e `color`. Isso permite comparar as versões stable e canary no Grafana.
 
 ## Logs
 

@@ -3,8 +3,8 @@ spring:
     name: system-info-api
 
 app:
-  version: ${APP_VERSION:grey}
-  color: ${APP_COLOR:grey}
+  version: ${APP_VERSION:yellow}
+  color: ${APP_COLOR:yellow}
 
 server:
   shutdown: graceful

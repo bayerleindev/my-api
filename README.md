@@ -119,7 +119,7 @@ Para adicionar uma tag destinada a um registry:
 
 ```bash
 make image-tag \
-  TARGET_IMAGE=ghcr.io/usuario/system-info-api:blue
+  TARGET_IMAGE=gbcamargo/system-info-api:blue
 ```
 
 Execute a imagem:
@@ -142,14 +142,20 @@ make kind-load IMAGE_TAG=green KIND_CLUSTER=outro-cluster
 
 ## Implantar com Argo Rollouts
 
-O manifesto [`k8s/rollout.yaml`](k8s/rollout.yaml) configura um canary com NGINX nos pesos 5%, 10%, 50% e 100%. Cada peso possui uma pausa sem duração e exige promoção manual.
+Os manifests foram separados do código e estão no repositório [bayerleindev/my-api-manifests](https://github.com/bayerleindev/my-api-manifests). O Rollout configura um canary com NGINX nos pesos 5%, 10%, 50% e 100%, todos com promoção manual.
 
-Crie a imagem, carregue-a no kind e aplique o manifesto:
+Crie a imagem e carregue-a no kind:
 
 ```bash
 make image-build
 make kind-load
-kubectl apply --filename k8s/rollout.yaml
+```
+
+Clone e aplique o repositório de manifests:
+
+```bash
+git clone https://github.com/bayerleindev/my-api-manifests.git
+kubectl apply --kustomize my-api-manifests/k8s
 ```
 
 Acompanhe o rollout:

@@ -29,6 +29,13 @@ jobs:
       - name: Checkout da API
         uses: actions/checkout@v7
 
+      - name: Configurar Java 21
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
       - name: Executar testes
         run: ./mvnw --batch-mode test
 

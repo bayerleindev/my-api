@@ -171,3 +171,28 @@ kubectl argo rollouts promote my-api
 ```
 
 Existe uma pausa também depois de 100%. Portanto, a última promoção confirma a versão e conclui o rollout.
+
+## Pipeline GitOps no GitHub Actions
+
+O workflow `Build and update manifests` é executado manualmente e recebe uma cor para identificar a versão. Ele:
+
+1. executa os testes;
+2. cria e publica `gbcamargo/system-info-api:<commit-sha>` no Docker Hub;
+3. grava o SHA completo em `k8s/rollout.yaml` no repositório `my-api-manifests`;
+4. cria um commit na branch `main` dos manifests.
+
+Cadastre estes secrets em **Settings > Secrets and variables > Actions** deste repositório:
+
+- `DOCKERHUB_TOKEN`: access token do Docker Hub com permissão de push;
+- `MANIFESTS_TOKEN`: fine-grained personal access token do GitHub com acesso ao repositório `bayerleindev/my-api-manifests` e permissão **Contents: Read and write**.
+
+Depois, abra **Actions > Build and update manifests > Run workflow**, informe uma cor, como `purple`, e execute. A resposta de `/api/system` e os logs da nova imagem mostrarão essa cor.
+
+Como a aplicação do Argo CD deste laboratório está configurada com sincronização manual, o commit deixará a aplicação como `OutOfSync`. Inicie o rollout com:
+
+```bash
+argocd app sync my-api
+kubectl argo rollouts get rollout my-api --watch
+```
+
+As promoções de 5%, 10%, 50% e 100% continuam manuais.

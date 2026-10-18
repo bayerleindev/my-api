@@ -1,0 +1,97 @@
+name: Build and update manifests
+
+on:
+  workflow_dispatch:
+    inputs:
+      color:
+        description: Cor exibida pela API para identificar esta versão
+        required: true
+        default: blue
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: my-api-manifests-main
+  cancel-in-progress: false
+
+env:
+  IMAGE_REPOSITORY: gbcamargo/system-info-api
+  MANIFESTS_REPOSITORY: bayerleindev/my-api-manifests
+
+jobs:
+  build-push-and-update:
+    name: Build, push and update GitOps
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout da API
+        uses: actions/checkout@v7
+
+      - name: Executar testes
+        run: ./mvnw --batch-mode test
+
+      - name: Login no Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: gbcamargo
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Configurar Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build e push da imagem
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+          build-args: |
+            APP_VERSION=${{ github.sha }}
+            APP_COLOR=${{ inputs.color }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Checkout dos manifests
+        uses: actions/checkout@v7
+        with:
+          repository: ${{ env.MANIFESTS_REPOSITORY }}
+          ref: main
+          token: ${{ secrets.MANIFESTS_TOKEN }}
+          path: manifests
+
+      - name: Atualizar imagem do Rollout
+        env:
+          IMAGE: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+        run: |
+          sed -i -E "s|^([[:space:]]*)image: gbcamargo/system-info-api:[^[:space:]]+|\1image: ${IMAGE}|" manifests/k8s/rollout.yaml
+          grep "image: ${IMAGE}" manifests/k8s/rollout.yaml
+
+      - name: Commit e push dos manifests
+        working-directory: manifests
+        env:
+          APP_COLOR: ${{ inputs.color }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/rollout.yaml
+
+          if git diff --cached --quiet; then
+            echo "O manifesto já aponta para esta imagem."
+            exit 0
+          fi
+
+          git commit -m "deploy: ${SOURCE_SHA} (${APP_COLOR})"
+          git push origin HEAD:main
+
+      - name: Resumo
+        env:
+          APP_COLOR: ${{ inputs.color }}
+          IMAGE: ${{ env.IMAGE_REPOSITORY }}:${{ github.sha }}
+        run: |
+          echo "### Imagem publicada" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Imagem: \`${IMAGE}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cor: \`${APP_COLOR}\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Manifests: \`${MANIFESTS_REPOSITORY}\`" >> "$GITHUB_STEP_SUMMARY"
